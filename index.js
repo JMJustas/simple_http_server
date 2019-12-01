@@ -1,129 +1,63 @@
-const http = require('http');
-const fs = require('fs');
-const url = require('url');
+const path = require('path');
 
-/**
- * A helper function that asynchronously reads a specified file
- */
-function readStaticFile(name) {
- return new Promise(
-  (resolve, reject) => fs.readFile(name, (err, data) => {
-    if (err) return reject(err);
-    return resolve(data);
-  }))
-}
+const express = require('express');
+const bodyParser = require('body-parser');
+const mustacheExpress = require('mustache-express');
 
-/**
- * A helper function that reads data from request body and returns it as string
- */
-function readRequestBody(req) {
-  let body = '';
-  return new Promise(
-    (resolve, reject) => {
-      try {
-        req.on('data', (chunk) => {
-          body += chunk.toString()
-        });
+const app = express();
 
-        req.on('end', () => {
-          return resolve(body)
-        });
-      } catch (err) {
-        return reject(err);
-      }
-    });
-}
+// We use mustache as templating engine
+app.engine('mustache', mustacheExpress());
+app.set('view engine', 'mustache');
 
-/**
- * Request handler function
- */
-async function handleRequest(req, res) {
+// Parse request payload to json object in req.body
+app.use(bodyParser.json());
+
+// Log all the requests
+app.use((req, res, next) => {
   console.log(`Incoming request: ${req.method} ${req.url}`);
+  // Pass request to next request handler in chain
+  next();
+});
 
-  const parsedUrl = url.parse(req.url, true);
+// Render index using mustache
+app.get('/', (req, res) => {
+  // Let's also render current date
+  const currentDate = new Date().toDateString();
+  res.render('index', { currentDate });
+});
 
-  try {
-    // GET /
-    if (parsedUrl.pathname === '/' && req.method === 'GET'){
+// Some calculations without tedious body parsing
+app.post('/', (req, res, next) => {
+  const a = parseInt(req.body.a);
+  const b = parseInt(req.body.b);
 
-      const content = `
-        <html>
-            <head> <title>A very simple web app</title> </head>
-            <body>
-                <div id="view"></div>
-                <script src="/static/js/app.js"></script>
-            </body>
-        </html>`;
-
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'text/html');
-      res.write(content);
-      res.end();
-      return;
-    }
-
-    // POST /
-    if (parsedUrl.pathname === '/' && req.method === 'POST'){
-
-      const body = await readRequestBody(req);
-      const params = JSON.parse(body);
-      const a = parseInt(params.a);
-      const b = parseInt(params.b);
-
-      if (isNaN(a) || isNaN(b)) {
-        throw new Error("Got not a number as sum argument")
-      }
-
-      const sum = a + b;
-
-      const payload = JSON.stringify({ result: sum });
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'application/json');
-      res.write(payload);
-      res.end();
-      return;
-    }
-
-    // Serve static html content
-    if (parsedUrl.pathname.startsWith(`/static/pages`) && req.method === 'GET') {
-      const content = await readStaticFile('.' + parsedUrl.pathname);
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'text/html');
-      res.write(content);
-      res.end();
-      return;
-    }
-
-    // Serve static javascript content
-    if (parsedUrl.pathname.startsWith(`/static/js`) && req.method === 'GET') {
-      const content = await readStaticFile('./' + parsedUrl.pathname);
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'text/javascript');
-      res.write(content);
-      res.end();
-      return;
-    }
-
-
-    // No route matched the request
-    const content = await readStaticFile('./static/not_found.html');
-    res.statusCode = 404; // 404 Not Found
-    res.setHeader('Content-Type', 'text/html');
-    res.write(content);
-    return res.end();
-  } catch (err) {
-    res.statusCode = 500;
-    res.setHeader('Content-Type', 'text/plain');
-    res.write(err.message);
-    return res.end();
+  if (isNaN(a) || isNaN(b)) {
+     next(new Error("Got not a number as sum argument"));
   }
-}
 
-// Create a http server with our request handler function
-const httpServer = http.createServer(handleRequest);
+  const sum = a + b;
+
+  res.json({ result: sum });
+});
+
+// Serving static files is really, really simple :)
+app.use('/static/js', express.static(path.join(__dirname, "static/js")));
+app.use('/static/pages', express.static(path.join(__dirname, "static/pages")));
+
+// Everything that did not match any handlers will result in 404
+app.use((req, res, next) => {
+  res.statusCode = 404;
+  res.sendFile(path.join(__dirname, 'static/not_found.html'));
+});
+
+// Unexpected error handler
+app.use((err, req, res, next) => {
+  console.log("Encountered an error: " + err.message);
+  res.statusCode = 500;
+  res.render('error', { err });
+});
 
 // Start server
 const port = 8080;
-httpServer.listen(port, () => {
-  console.log('HTTP server started and listening on port ' + port);
-});
+app.listen(port, () => console.log('HTTP server started and listening on port ' + port));
