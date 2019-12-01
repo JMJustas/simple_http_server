@@ -42,7 +42,26 @@ async function handleRequest(req, res) {
   try {
     // GET /
     if (req.url === '/' && req.method === 'GET'){
-      const content = await readStaticFile('./static/index.html');
+
+      const content = `
+        <html>
+            <head>
+                <title>A very simple web app</title>
+            </head>
+            <body>
+              <h1>Hello, world!</h1>
+              <p>This is the index page</p>
+
+              <p>This website has more pages:</p>
+
+              <ul>
+                  <li><a href="/static/pages/first.html"> The first page which is useless</a> </li>
+                  <li><a href="/static/pages/second.html"> The second page which is also useless</a> </li>
+              </ul>
+            </body>  
+        </html>
+      `;
+
       res.statusCode = 200;
       res.setHeader('Content-Type', 'text/html');
       res.write(content);
