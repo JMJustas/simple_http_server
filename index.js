@@ -1,6 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const url = require('url');
+const querystring = require('querystring');
 
 /**
  * A helper function that asynchronously reads a specified file
@@ -46,22 +47,52 @@ async function handleRequest(req, res) {
     // GET /
     if (parsedUrl.pathname === '/' && req.method === 'GET'){
 
-      let sumView = '';
+      const content = `
+        <html>
+            <head>
+                <title>A very simple web app</title>
+            </head>
+            <body>
+              <h1>Hello, world!</h1>
+              <p>This is the index page</p>
 
-      const hasQueryParameters = Object.keys(parsedUrl.query).length > 0;
-      if (hasQueryParameters) {
-        const query = parsedUrl.query;
-        const a = parseInt(query.a);
-        const b = parseInt(query.b);
+              
+              <form action="/" method="post">
+                  <input type="number" name="a" value="0"/>
+                  <input type="number" name="b" value="0"/>
+                  <input type="submit" value="Add">
+              </form>
+              
+              <p>This website has more pages:</p>
 
-        if (isNaN(a) || isNaN(b)) {
-          throw new Error("Got not a number as sum argument")
-        }
+              <ul>
+                  <li><a href="/static/pages/first.html"> The first page which is useless</a> </li>
+                  <li><a href="/static/pages/second.html"> The second page which is also useless</a> </li>
+              </ul>
+            </body>
+        </html>
+      `;
 
-        const sum = a + b;
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'text/html');
+      res.write(content);
+      res.end();
+      return;
+    }
 
-        sumView = `<p>Sum of ${a} and ${b} is: ${sum}</p>`;
+    // POST /
+    if (parsedUrl.pathname === '/' && req.method === 'POST'){
+
+      const body = await readRequestBody(req);
+      const params = querystring.parse(body);
+      const a = parseInt(params.a);
+      const b = parseInt(params.b);
+
+      if (isNaN(a) || isNaN(b)) {
+        throw new Error("Got not a number as sum argument")
       }
+
+      const sum = a + b;
 
       const content = `
         <html>
@@ -72,17 +103,23 @@ async function handleRequest(req, res) {
               <h1>Hello, world!</h1>
               <p>This is the index page</p>
 
-              ${sumView}
-            
+              
+              <form action="/" method="post">
+                  <input type="number" name="a" value="0"/>
+                  <input type="number" name="b" value="0"/>
+                  <input type="submit" value="Add">
+              </form>
+              
+               <p>Sum of ${a} and ${b} is: ${sum}</p>
+              
               <p>This website has more pages:</p>
 
               <ul>
                   <li><a href="/static/pages/first.html"> The first page which is useless</a> </li>
                   <li><a href="/static/pages/second.html"> The second page which is also useless</a> </li>
               </ul>
-            </body>  
-        </html>
-      `;
+            </body>
+        </html>`;
 
       res.statusCode = 200;
       res.setHeader('Content-Type', 'text/html');
