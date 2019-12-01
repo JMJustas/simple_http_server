@@ -1,5 +1,6 @@
 const http = require('http');
 const fs = require('fs');
+const url = require('url');
 
 /**
  * A helper function that asynchronously reads a specified file
@@ -39,9 +40,28 @@ function readRequestBody(req) {
 async function handleRequest(req, res) {
   console.log(`Incoming request: ${req.method} ${req.url}`);
 
+  const parsedUrl = url.parse(req.url, true);
+
   try {
     // GET /
-    if (req.url === '/' && req.method === 'GET'){
+    if (parsedUrl.pathname === '/' && req.method === 'GET'){
+
+      let sumView = '';
+
+      const hasQueryParameters = Object.keys(parsedUrl.query).length > 0;
+      if (hasQueryParameters) {
+        const query = parsedUrl.query;
+        const a = parseInt(query.a);
+        const b = parseInt(query.b);
+
+        if (isNaN(a) || isNaN(b)) {
+          throw new Error("Got not a number as sum argument")
+        }
+
+        const sum = a + b;
+
+        sumView = `<p>Sum of ${a} and ${b} is: ${sum}</p>`;
+      }
 
       const content = `
         <html>
@@ -52,6 +72,8 @@ async function handleRequest(req, res) {
               <h1>Hello, world!</h1>
               <p>This is the index page</p>
 
+              ${sumView}
+            
               <p>This website has more pages:</p>
 
               <ul>
@@ -70,8 +92,8 @@ async function handleRequest(req, res) {
     }
 
     // Serve static html content
-    if (req.url.startsWith(`/static/pages`) && req.method === 'GET') {
-      const content = await readStaticFile('.' + req.url);
+    if (parsedUrl.pathname.startsWith(`/static/pages`) && req.method === 'GET') {
+      const content = await readStaticFile('.' + parsedUrl.pathname);
       res.statusCode = 200;
       res.setHeader('Content-Type', 'text/html');
       res.write(content);
