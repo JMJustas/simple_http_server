@@ -57,7 +57,7 @@ async function handleRequest(req, res) {
               <p>This is the index page</p>
 
               
-              <form action="/" method="post">
+              <form id="calculationForm" action="/" method="post">
                   <input type="number" name="a" value="0"/>
                   <input type="number" name="b" value="0"/>
                   <input type="submit" value="Add">
@@ -69,6 +69,8 @@ async function handleRequest(req, res) {
                   <li><a href="/static/pages/first.html"> The first page which is useless</a> </li>
                   <li><a href="/static/pages/second.html"> The second page which is also useless</a> </li>
               </ul>
+              
+              <script src="/static/js/change.js"></script>
             </body>
         </html>
       `;
@@ -104,7 +106,7 @@ async function handleRequest(req, res) {
               <p>This is the index page</p>
 
               
-              <form action="/" method="post">
+              <form id="calculationForm" action="/" method="post">
                   <input type="number" name="a" value="0"/>
                   <input type="number" name="b" value="0"/>
                   <input type="submit" value="Add">
@@ -118,6 +120,8 @@ async function handleRequest(req, res) {
                   <li><a href="/static/pages/first.html"> The first page which is useless</a> </li>
                   <li><a href="/static/pages/second.html"> The second page which is also useless</a> </li>
               </ul>
+
+              <script src="/static/js/change.js"></script>
             </body>
         </html>`;
 
@@ -137,6 +141,17 @@ async function handleRequest(req, res) {
       res.end();
       return;
     }
+
+    // Serve static javascript content
+    if (parsedUrl.pathname.startsWith(`/static/js`) && req.method === 'GET') {
+      const content = await readStaticFile('./' + parsedUrl.pathname);
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'text/javascript');
+      res.write(content);
+      res.end();
+      return;
+    }
+
 
     // No route matched the request
     const content = await readStaticFile('./static/not_found.html');
